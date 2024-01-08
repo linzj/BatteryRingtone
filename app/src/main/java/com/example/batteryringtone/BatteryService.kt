@@ -49,13 +49,7 @@ class BatteryService : Service() {
 
                     if (batteryPct >= 80) {
                         // Only play the sound if the device is charging
-                        val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-                        val isCharging =
-                            status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-
-                        if (isCharging) {
-                            playRingtone(context)
-                        }
+                        playRingtone(context)
                     }
                 }
             }
@@ -67,14 +61,32 @@ class BatteryService : Service() {
     }
 
     private fun playRingtone(context: Context) {
-        try {
-            val notification: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val ringtone: Ringtone =
-                RingtoneManager.getRingtone(context.applicationContext, notification)
-            ringtone.play()
-        } catch (e: Exception) {
-            e.printStackTrace()
+        val handler = Handler(Looper.getMainLooper())
+        val notification: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        val ringtone: Ringtone? =
+            RingtoneManager.getRingtone(context.applicationContext, notification)
+
+        val numberOfPlays = 10 // The number of times to play the ringtone
+        val intervalMillis = 1000L // Interval in milliseconds (1000ms = 1s)
+
+        var playCount = 0
+        val runnable = object : Runnable {
+            override fun run() {
+                try {
+                    if (playCount < numberOfPlays && ringtone != null) {
+                        if (!ringtone.isPlaying) {
+                            ringtone.play()
+                            playCount++
+                        }
+                        handler.postDelayed(this, intervalMillis)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
+
+        handler.post(runnable)
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
